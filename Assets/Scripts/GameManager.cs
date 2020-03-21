@@ -41,7 +41,8 @@ public class GameManager : MonoBehaviour
         _data = GetComponent<DataManager>();
         _data.Initialize();
         isDataLoaded = true;
-        dataLoaded.Invoke(); 
+        if(dataLoaded != null)
+            dataLoaded.Invoke(); 
     }
 
     void SetActivePlaylist(Playlist playlist)

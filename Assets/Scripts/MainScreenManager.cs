@@ -12,27 +12,32 @@ public class MainScreenManager : MonoBehaviour
     GameObject quitButtonGO;
     AsyncOperation sceneLoadOp;
 
-    private void OnEnable()
+    private void Awake()
     {
+        quitButtonGO = Instantiate(quitButtonPrefab, playlistButtonGroup.transform);
+        quitButtonGO.GetComponent<Button>().onClick.AddListener(Quit);
+
         if (GameManager.isDataLoaded)
         {
             PopulateButtons();
         }
         else {
-            GameManager.dataLoaded -= PopulateButtons; //Failsafe to ensure no case where callback added twice
+            GameManager.dataLoaded -= PopulateButtons;
             GameManager.dataLoaded += PopulateButtons;
         }
-
-        quitButtonGO = Instantiate(quitButtonPrefab, playlistButtonGroup.transform);
-        quitButtonGO.GetComponent<Button>().onClick.AddListener(Quit);
 
         GameManager.Data.mediaReady -= OnMediaReady;
         GameManager.Data.mediaReady += OnMediaReady;
 
-        sceneLoadOp = SceneManager.LoadSceneAsync("Game");
     }
 
-    private void OnDisable()
+    private void Start()
+    {
+        sceneLoadOp = SceneManager.LoadSceneAsync("Game");
+        sceneLoadOp.allowSceneActivation = false;
+    }
+
+    private void Destroy()
     {
         loadingPanel.SetActive(false);
         GameManager.dataLoaded -= PopulateButtons;
@@ -59,6 +64,7 @@ public class MainScreenManager : MonoBehaviour
 
     void OnMediaReady()
     {
+        Debug.Log("Media ready");
         sceneLoadOp.allowSceneActivation = true;
     }
 

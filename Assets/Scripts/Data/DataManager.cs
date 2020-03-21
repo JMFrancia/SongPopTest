@@ -40,7 +40,7 @@ public class DataManager : MonoBehaviour
     public void Initialize()
     {
         string formattedData = $"{{\"playlists\":{rawDataJSON.text}}}";
-        data = JsonUtility.FromJson<SPData>(formattedData);
+        data = JsonUtility.FromJson<SPData>( formattedData);
 
         Playlists = new Dictionary<string, Playlist>();
         for(int n = 0; n < data.playlists.Count; n++) {
@@ -169,6 +169,7 @@ public class DataManager : MonoBehaviour
             if (imageRequestsInProgress == 0)
             {
                 fetchingMedia = false;
+                mediaReady.Invoke();
             }
         }
     }
