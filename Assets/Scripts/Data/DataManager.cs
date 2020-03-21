@@ -18,7 +18,7 @@ public class DataManager : MonoBehaviour
     public Action mediaReady;
 
     public Dictionary<string, Playlist> Playlists { get; private set; }
-    public Dictionary<string, AudioClip> Audioclips { get; private set; }
+    public Dictionary<Song, AudioClip> SongSamples { get; private set; }
     public Dictionary<string, Texture> Images { get; private set; }
     public bool fetchingMedia { get; private set; } = false;
 
@@ -48,7 +48,7 @@ public class DataManager : MonoBehaviour
         }
 
         Images = new Dictionary<string, Texture>();
-        Audioclips = new Dictionary<string, AudioClip>();
+        SongSamples = new Dictionary<Song, AudioClip>();
     }
 
     /*
@@ -67,14 +67,14 @@ public class DataManager : MonoBehaviour
     void FetchAllAudioClips(Playlist playlist)
     {
         if(!cacheDataBetweenRounds)
-            Audioclips.Clear();
+            SongSamples.Clear();
         audioClipsFetched = 0;
         audioRequestsInProgress = 0;
         totalAudioRequests = 0;
         for (int n = 0; n < playlist.questions.Length; n++)
         {
             totalAudioRequests++;
-            StartCoroutine(FetchAudioClip(playlist.questions[n].song.sample));
+            StartCoroutine(FetchSongClip(playlist.questions[n].song));
         }
     }
 
@@ -137,11 +137,11 @@ public class DataManager : MonoBehaviour
     /*
      * Fetches / caches audio clip from given URL, stores in audio clip dictionary with URL as key
      */
-    IEnumerator FetchAudioClip(string url)
+    IEnumerator FetchSongClip(Song song)
     {
-        Audioclips[url] = null;
+        SongSamples[song] = null;
         audioRequestsInProgress++;
-        using (UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip(url, AudioType.WAV))
+        using (UnityWebRequest request = UnityWebRequestMultimedia.GetAudioClip(song.sample, AudioType.WAV))
         {
             yield return request.SendWebRequest();
 
@@ -151,12 +151,12 @@ public class DataManager : MonoBehaviour
             }
             else
             {
-                Audioclips[url] = DownloadHandlerAudioClip.GetContent(request);
+                SongSamples[song] = DownloadHandlerAudioClip.GetContent(request);
             }
         }
-        if (Audioclips[url] == null)
+        if (SongSamples[song] == null)
         {
-            Audioclips.Remove(url);
+            SongSamples.Remove(song);
         }
         else
         {
