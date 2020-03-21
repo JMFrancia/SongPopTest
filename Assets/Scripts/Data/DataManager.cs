@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -13,6 +14,8 @@ public class DataManager : MonoBehaviour
 
     [SerializeField] TextAsset rawDataJSON;
     [SerializeField] bool cacheDataBetweenRounds = false;
+
+    public Action mediaReady;
 
     public Dictionary<string, Playlist> Playlists { get; private set; }
     public Dictionary<string, AudioClip> Audioclips { get; private set; }
@@ -39,6 +42,7 @@ public class DataManager : MonoBehaviour
         string formattedData = $"{{\"playlists\":{rawDataJSON.text}}}";
         data = JsonUtility.FromJson<SPData>(formattedData);
 
+        Playlists = new Dictionary<string, Playlist>();
         for(int n = 0; n < data.playlists.Count; n++) {
             Playlists[data.playlists[n].playlist] = data.playlists[n];
         }
@@ -48,9 +52,9 @@ public class DataManager : MonoBehaviour
     }
 
     /*
-     * Fetches all images and audio clips for a given playlist
+     * Fetches / caches all images and audio clips for a given playlist
      */
-    void FetchPlaylistMedia(Playlist playlist)
+    public void FetchPlaylistMedia(Playlist playlist)
     {
         fetchingMedia = true;
         FetchAllImages(playlist);
@@ -58,7 +62,7 @@ public class DataManager : MonoBehaviour
     }
 
     /*
-     * Fetches all audio clips for a given playlist
+     * Fetches / caches all audio clips for a given playlist
      */
     void FetchAllAudioClips(Playlist playlist)
     {
@@ -75,7 +79,7 @@ public class DataManager : MonoBehaviour
     }
 
     /*
-     * Fetches all images for a given playlist
+     * Fetches / caches all images for a given playlist
      */
     void FetchAllImages(Playlist playlist)
     {
@@ -92,7 +96,7 @@ public class DataManager : MonoBehaviour
     }
 
     /*
-     * Fetches audio clip from given URL, stores in audio clip dictionary with URL as key
+     * Fetches / caches audio clip from given URL, stores in audio clip dictionary with URL as key
      */
     IEnumerator FetchImage(string url)
     {
@@ -125,12 +129,13 @@ public class DataManager : MonoBehaviour
             Debug.Log($"All images fetched. {imagesFetched} / {totalImageRequests} received successfully");
             if(audioRequestsInProgress == 0) {
                 fetchingMedia = false;
+                mediaReady.Invoke();
             }
         }
     }
 
     /*
-     * Fetches audio clip from given URL, stores in audio clip dictionary with URL as key
+     * Fetches / caches audio clip from given URL, stores in audio clip dictionary with URL as key
      */
     IEnumerator FetchAudioClip(string url)
     {

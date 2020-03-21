@@ -1,15 +1,52 @@
 ﻿using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
+using System;
 
 public class GameManager : MonoBehaviour
 {
-    [HideInInspector]
-    public DataManager Data { get; private set; }
+    public static DataManager Data {
+        get {
+            return _instance._data;
+        }
+    }
 
-    private void Start()
+    public static event Action dataLoaded;
+
+    public static Playlist ActivePlaylist {
+        set {
+            _instance.SetActivePlaylist(value);
+        }
+        get {
+            return _instance._activePlaylist;
+        }
+    }
+    public static bool isDataLoaded = false;
+
+    static GameManager _instance;
+    Playlist _activePlaylist;
+    DataManager _data;
+
+    private void Awake()
     {
-        Data = GetComponent<DataManager>();
-        Data.Initialize();
+        if (_instance == null)
+        {
+            _instance = this;
+        }
+        else
+        {
+            Destroy(this);
+        }
+
+        DontDestroyOnLoad(gameObject);
+
+        _data = GetComponent<DataManager>();
+        _data.Initialize();
+        isDataLoaded = true;
+        dataLoaded.Invoke(); 
+    }
+
+    void SetActivePlaylist(Playlist playlist)
+    {
+        _activePlaylist = playlist;
+        _data.FetchPlaylistMedia(playlist);
     }
 }
