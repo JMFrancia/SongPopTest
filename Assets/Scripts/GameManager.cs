@@ -21,6 +21,8 @@ public class GameManager : MonoBehaviour
     }
     public static bool isDataLoaded = false;
 
+    public static bool[] results;
+
     static GameManager _instance;
     Playlist _activePlaylist;
     DataManager _data;

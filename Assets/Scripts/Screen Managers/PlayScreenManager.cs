@@ -11,20 +11,16 @@ public class PlayScreenManager : MonoBehaviour
 
     AudioSource audiosource;
     Question[] questions;
-    bool[] correctAnswers;
+    bool[] results;
     int currentQuestionIndex = -1;
 
-    private void Awake()
+    private void Start()
     {
         audiosource = GetComponent<AudioSource>();
         questions = GameManager.ActivePlaylist.questions;
-        correctAnswers = new bool[questions.Length];
+        results = new bool[questions.Length];
 
         LoadNextQuestion();
-    }
-
-    void LoadQuestionAtIndex(int n) {
-        LoadQuestion(questions[n]);
     }
 
     void LoadQuestion(Question question) {
@@ -53,24 +49,25 @@ public class PlayScreenManager : MonoBehaviour
 
     void OnCorrectButtonPress() {
         Debug.Log("Correct!");
-        correctAnswers[currentQuestionIndex] = true;
+        results[currentQuestionIndex] = true;
         LoadNextQuestion();
     }
 
     void OnIncorrectButtonPress() {
         Debug.Log("Incorrect!");
-        correctAnswers[currentQuestionIndex] = false;
+        results[currentQuestionIndex] = false;
         LoadNextQuestion();
     }
 
     void LoadNextQuestion()
     {
         currentQuestionIndex++;
-        if(currentQuestionIndex < questions.Length - 1)
+        if(currentQuestionIndex < questions.Length)
         {
             LoadQuestion(questions[currentQuestionIndex]);
         } else {
-            SceneManager.LoadScene("Title"); //Replace w/ results screen
+            GameManager.results = results;
+            SceneManager.LoadScene("Results");
         }
     }
 }
