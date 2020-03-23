@@ -11,6 +11,7 @@ public class MainScreenManager : MonoBehaviour
 
     GameObject quitButtonGO;
     AsyncOperation sceneLoadOp;
+    BlurPanelManager blurPanelManager;
 
     private void Awake()
     {
@@ -29,6 +30,8 @@ public class MainScreenManager : MonoBehaviour
         GameManager.Data.mediaReady -= OnMediaReady;
         GameManager.Data.mediaReady += OnMediaReady;
 
+        blurPanelManager = GameObject.FindWithTag("BlurPanel").GetComponent<BlurPanelManager>();
+        blurPanelManager.BlurIn();
     }
 
     private void Start()

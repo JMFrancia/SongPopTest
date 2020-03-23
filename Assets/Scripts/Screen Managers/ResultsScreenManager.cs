@@ -1,17 +1,42 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class ResultsScreenManager : MonoBehaviour
 {
-    [SerializeField] Text percentageCorrectText;
+    [Serializable]
+    struct ScoreGrade {
+        public float minScore;
+        public char grade;
+
+        public ScoreGrade(float min, char grade) {
+            this.minScore = min;
+            this.grade = grade;
+        }
+    }
+
+    [SerializeField] ScoreGrade[] scoreGrades = new ScoreGrade[] {
+        new ScoreGrade(0f, 'F'),
+        new ScoreGrade(.3f, 'D'),
+        new ScoreGrade(.5f, 'C'),
+        new ScoreGrade(.8f, 'B'),
+        new ScoreGrade(.9f, 'A')
+    };
+
+    [SerializeField] Text speedGradeText;
+    [SerializeField] Text speedRatingText;
+    [SerializeField] Text finalScoreText;
+    [SerializeField] Text accuracyScoreText;
     [SerializeField] VerticalLayoutGroup resultsGroup;
     [SerializeField] GameObject resultPanelPrefab;
     [SerializeField] Button nextButton;
 
     AsyncOperation sceneLoadOp;
+    float accuracyToSpeedWeight = .7f;
 
     private void Start()
     {
@@ -23,8 +48,45 @@ public class ResultsScreenManager : MonoBehaviour
         nextButton.onClick.AddListener(ReturnToTitleScreen);
     }
 
+    void PopulateSpeedScore() {
+        float perfectSpeedScore = GameManager.ActivePlaylist.questions.Sum(q => GameManager.Data.SongSamples[q.song].length + 1f); //+1f for extra time to guess
+        float speedScore = GameManager.scores.Sum() / perfectSpeedScore;
+        Array.Sort<ScoreGrade>(scoreGrades, (a, b) => a.minScore.CompareTo(b.minScore));
+        string grade = "F";
+        for (int n = 0; n < scoreGrades.Length; n++)
+        {
+            if (speedScore > scoreGrades[n].minScore)
+            {
+                grade = scoreGrades[n].grade.ToString();
+            }
+            else
+            {
+                if (n > 0)
+                {
+                    float gradeMargin = (scoreGrades[n].minScore - speedScore) - scoreGrades[n - 1].minScore;
+                    if (gradeMargin > .7f)
+                    {
+                        grade += "-";
+                    }
+                    else if (gradeMargin < .2f)
+                    {
+                        grade += "+";
+                    }
+                }
+                break;
+            }
+        }
+
+    }
+
     void PopulateResults()
     {
+
+        //Calculate speed scores first
+        float perfectSpeedScore = GameManager.ActivePlaylist.questions.Sum(q => GameManager.Data.SongSamples[q.song].length + 1f); //+1f for extra time to guess
+        float speedScore = GameManager.scores.Sum() / perfectSpeedScore;
+
+        //Calculate accuracy scores
         int totalCorrect = 0;
         for (int n = 0; n < GameManager.results.Length; n++)
         {
@@ -38,8 +100,45 @@ public class ResultsScreenManager : MonoBehaviour
             }
         }
 
-        float finalScore = ((float)totalCorrect / (float)GameManager.results.Length) * 100;
-        percentageCorrectText.text = $"{finalScore.ToString("0.##\\%")} Correct";
+        float accuracyScore = ((float)totalCorrect / (float)GameManager.results.Length);
+
+        float finalScore = accuracyScore * accuracyToSpeedWeight + speedScore * (1 - accuracyToSpeedWeight);
+
+        //Determine letter grade
+        Array.Sort<ScoreGrade>(scoreGrades, (a, b) => a.minScore.CompareTo(b.minScore));
+        string grade = "F";
+        for (int n = 0; n < scoreGrades.Length; n++)
+        {
+            if (finalScore > scoreGrades[n].minScore)
+            {
+                grade = scoreGrades[n].grade.ToString();
+            }
+            else
+            {
+                if (n > 0)
+                {
+                    float gradeMargin = (scoreGrades[n].minScore - finalScore) - scoreGrades[n - 1].minScore;
+                    if (gradeMargin > .7f)
+                    {
+                        grade += "-";
+                    }
+                    else if (gradeMargin < .2f)
+                    {
+                        grade += "+";
+                    }
+                }
+                break;
+            }
+        }
+
+        accuracyScoreText.text = $"Accuracy: {FloatToPercentage(accuracyScore)}";
+        speedRatingText.text = $"Speed: {FloatToPercentage(speedScore)}";
+        finalScoreText.text = $"Total: {FloatToPercentage(finalScore)}";
+        speedGradeText.text = $"Grade: {grade}";
+    }
+
+    string FloatToPercentage(float input) {
+        return $"{Mathf.RoundToInt(input * 100)}%";
     }
 
     void ReturnToTitleScreen() {

@@ -22,6 +22,7 @@ public class GameManager : MonoBehaviour
     public static bool isDataLoaded = false;
 
     public static bool[] results;
+    public static float[] scores;
 
     static GameManager _instance;
     Playlist _activePlaylist;
