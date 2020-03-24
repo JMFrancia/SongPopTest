@@ -19,6 +19,7 @@ public class ResultsScreenManager : MonoBehaviour
         }
     }
 
+    [SerializeField] float accuracyToSpeedWeight = .7f;
     [SerializeField] ScoreGrade[] scoreGrades = new ScoreGrade[] {
         new ScoreGrade(0f, 'F'),
         new ScoreGrade(.3f, 'D'),
@@ -36,16 +37,16 @@ public class ResultsScreenManager : MonoBehaviour
     [SerializeField] Button nextButton;
 
     AsyncOperation sceneLoadOp;
-    float accuracyToSpeedWeight = .7f;
+    BlurPanelManager blurPanel;
 
     private void Start()
     {
         sceneLoadOp = SceneManager.LoadSceneAsync("Title");
         sceneLoadOp.allowSceneActivation = false;
-
+        blurPanel = GameObject.FindWithTag("BlurPanel").GetComponent<BlurPanelManager>();
+        nextButton.onClick.AddListener(() => StartCoroutine(ReturnToTitleScreen(1.5f)));
         PopulateResults();
-
-        nextButton.onClick.AddListener(ReturnToTitleScreen);
+        blurPanel.BlurIn();
     }
 
     void PopulateSpeedScore() {
@@ -99,7 +100,6 @@ public class ResultsScreenManager : MonoBehaviour
                 totalCorrect++;
             }
         }
-
         float accuracyScore = ((float)totalCorrect / (float)GameManager.results.Length);
 
         float finalScore = accuracyScore * accuracyToSpeedWeight + speedScore * (1 - accuracyToSpeedWeight);
@@ -141,7 +141,11 @@ public class ResultsScreenManager : MonoBehaviour
         return $"{Mathf.RoundToInt(input * 100)}%";
     }
 
-    void ReturnToTitleScreen() {
+    IEnumerator ReturnToTitleScreen(float delay)
+    {
+        blurPanel.BlurOut();
+        nextButton.interactable = false;
+        yield return new WaitForSeconds(delay); 
         sceneLoadOp.allowSceneActivation = true;
     }
 }

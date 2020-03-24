@@ -9,12 +9,18 @@ public class PlayScreenManager : MonoBehaviour
     [SerializeField] float extraTimeToGuess = 1f; //Time to guess beyond the length of the audio clip
     [SerializeField] float waitBetweenQuestions = 1.5f;
     [SerializeField] float songFadeout = 1f;
+
+    [SerializeField] AudioClip wrongAnswerSound;
+    [SerializeField] AudioClip rightAnswerSound;
+
     [SerializeField] GameObject choiceButtonPrefab;
     [SerializeField] VerticalLayoutGroup choicesLayoutGroup;
     [SerializeField] Text headerText;
     [SerializeField] Timer timer;
 
-    AudioSource audiosource;
+    AudioSource songAudioSource;
+    AudioSource sfxAudioSource;
+    BlurPanelManager blurPanel;
     Question[] questions;
     bool[] results;
     float[] scores;
@@ -23,18 +29,25 @@ public class PlayScreenManager : MonoBehaviour
 
     private void Start()
     {
-        audiosource = GetComponent<AudioSource>();
+        AudioSource[] audioSources = GetComponents<AudioSource>();
+        songAudioSource = audioSources[0];
+        sfxAudioSource = audioSources[1];
+
+        blurPanel = GameObject.FindWithTag("BlurPanel").GetComponent<BlurPanelManager>();
         questions = GameManager.ActivePlaylist.questions;
         results = new bool[questions.Length];
         scores = new float[questions.Length];
 
         LoadNextQuestion();
+
+        timer.onComplete += () => OnChoiceButtonPress(false);
+        blurPanel.BlurIn();
     }
 
     void LoadQuestion(Question question) {
-        audiosource.clip = GameManager.Data.SongSamples[question.song];
-        timer.Set(audiosource.clip.length + extraTimeToGuess);
-        audiosource.Play();
+        songAudioSource.clip = GameManager.Data.SongSamples[question.song];
+        timer.Set(songAudioSource.clip.length + extraTimeToGuess);
+        songAudioSource.Play();
 
         //Refactor to re-use same buttons
         foreach(Transform choice in choicesLayoutGroup.transform) {
@@ -49,11 +62,18 @@ public class PlayScreenManager : MonoBehaviour
         } 
     }
 
+    void PlayAnswerSound(bool correct)
+    {
+        StartCoroutine(FadeOutAudio());
+        sfxAudioSource.clip = correct ? rightAnswerSound : wrongAnswerSound;
+        sfxAudioSource.Play();
+    }
+
     private void Update()
     {
-        if( audiosource.isPlaying && 
+        if( songAudioSource.isPlaying && 
             !isFadingOut && 
-            audiosource.time >= (audiosource.clip.length - songFadeout)) 
+            songAudioSource.time >= (songAudioSource.clip.length - songFadeout)) 
         {
             StartCoroutine(FadeOutAudio());
         }
@@ -62,29 +82,23 @@ public class PlayScreenManager : MonoBehaviour
     IEnumerator FadeOutAudio() {
         isFadingOut = true;
         float timePassed = 0f;
-        while(audiosource.volume > 0f) {
-            audiosource.volume = Mathf.Max(0f , 1f - timePassed / songFadeout);
+        while(songAudioSource.volume > 0f) {
+            songAudioSource.volume = Mathf.Max(0f , 1f - timePassed / songFadeout);
             timePassed += Time.deltaTime;
             yield return new WaitForEndOfFrame();
         }
         isFadingOut = false;
-        audiosource.Stop();
-        audiosource.volume = 1f;
+        songAudioSource.Stop();
+        songAudioSource.volume = 1f;
     }
 
     void OnChoiceButtonPress(bool correct) {
         timer.Stop();
         scores[currentQuestionIndex] = timer.time;
-        if(correct)
-        {
-            headerText.text = "Correct!";
-            results[currentQuestionIndex] = true;
 
-        } else
-        {
-            headerText.text = "Wrong!";
-            results[currentQuestionIndex] = false;
-        }
+        headerText.text = correct ? "Correct!" : "Wrong!";
+        results[currentQuestionIndex] = correct;
+        PlayAnswerSound(correct);
 
         for(int n = 0; n < choicesLayoutGroup.transform.childCount; n++) {
             Button b = choicesLayoutGroup.transform.GetChild(n).GetComponent<Button>();
@@ -109,10 +123,17 @@ public class PlayScreenManager : MonoBehaviour
         if(currentQuestionIndex < questions.Length)
         {
             LoadQuestion(questions[currentQuestionIndex]);
-        } else {
+        } else
+        {
             GameManager.results = results;
             GameManager.scores = scores;
-            SceneManager.LoadScene("Results");
+            StartCoroutine(GoToResultsScreen(1.5f));
         }
+    }
+
+    IEnumerator GoToResultsScreen(float delay) {
+        blurPanel.BlurOut();
+        yield return new WaitForSeconds(delay);
+        SceneManager.LoadScene("Results");
     }
 }

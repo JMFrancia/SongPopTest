@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,6 +12,8 @@ public class Timer : MonoBehaviour
     [SerializeField] Color warningColor;
 
     public float time { get; private set; }
+
+    public Action onComplete;
 
     Color originalColor;
     float originalTime;
@@ -49,5 +52,6 @@ public class Timer : MonoBehaviour
                 yield return new WaitForEndOfFrame();
             }
         }
+        onComplete.Invoke();
     }
 }
