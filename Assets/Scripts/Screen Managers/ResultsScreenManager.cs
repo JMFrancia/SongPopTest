@@ -28,6 +28,7 @@ public class ResultsScreenManager : MonoBehaviour
         new ScoreGrade(.9f, 'A')
     };
 
+    [SerializeField] Image gradeCircle;
     [SerializeField] GameObject background;
     [SerializeField] Text speedGradeText;
     [SerializeField] Text speedRatingText;
@@ -39,13 +40,22 @@ public class ResultsScreenManager : MonoBehaviour
     AsyncOperation sceneLoadOp;
     BlurPanelManager blurPanel;
     Vector3 nextButtonOriginalPos;
+    Vector3 backgroundOriginalPos;
 
     private void Start()
     {
+        backgroundOriginalPos = background.transform.position;
         background.transform.position -= new Vector3(0f, 450f, 0f);
 
         blurPanel = GameObject.FindWithTag("BlurPanel").GetComponent<BlurPanelManager>();
-        blurPanel.onBlurInComplete += () => LeanTween.move(background, Vector3.zero, .75f).setEase(LeanTweenType.easeOutCirc).setOnComplete(PopulateResults);
+        blurPanel.onBlurInComplete += () =>
+        {
+            LeanTween.move(background, backgroundOriginalPos, .75f).setEase(LeanTweenType.easeOutCirc).setOnComplete(PopulateResults);
+            foreach (AudioSource source in GetComponents<AudioSource>())
+            {
+                source.Play();
+            }
+        };
         blurPanel.BlurIn();
 
         sceneLoadOp = SceneManager.LoadSceneAsync("Title");
@@ -53,11 +63,30 @@ public class ResultsScreenManager : MonoBehaviour
         nextButton.onClick.AddListener(() => StartCoroutine(ReturnToTitleScreen(1.5f)));
         nextButtonOriginalPos = nextButton.transform.position;
         nextButton.transform.position -= new Vector3(0f, 78f, 0f);
+        gradeCircle.fillAmount = 0f;
+    }
+
+    void CircleGrade(float delay = 0f) {
+        StartCoroutine(FillImage(gradeCircle, .33f, delay));
+    }
+
+    IEnumerator FillImage(Image image, float time, float delay = 0f) {
+        if (delay > 0f)
+        {
+            yield return new WaitForSeconds(delay);
+        }
+        float originalFill = image.fillAmount;
+        float timePassed = 0f;
+        while(image.fillAmount < 1f)
+        {
+            image.fillAmount = Mathf.Lerp(originalFill, 1f, timePassed / time);
+            timePassed += Time.deltaTime;
+            yield return new WaitForEndOfFrame();
+        }
     }
 
     void PopulateResults()
     {
-
         //Calculate speed scores first
         float perfectSpeedScore = GameManager.ActivePlaylist.questions.Sum(q => GameManager.Data.SongSamples[q.song].length + 1f); //+1f for extra time to guess
         float speedScore = GameManager.scores.Sum() / perfectSpeedScore;
@@ -91,6 +120,10 @@ public class ResultsScreenManager : MonoBehaviour
             //Goes toward final score calculations
             if(GameManager.results[n]) {
                 totalCorrect++;
+            }
+
+            if(n == GameManager.results.Length - 1) {
+                CircleGrade(delay + 1f);
             }
         }
         float accuracyScore = ((float)totalCorrect / (float)GameManager.results.Length);
@@ -128,7 +161,7 @@ public class ResultsScreenManager : MonoBehaviour
         speedRatingText.text = FloatToPercentage(speedScore);
         speedGradeText.text = grade;
 
-        LeanTween.move(nextButton.gameObject, nextButtonOriginalPos, 1f).setEase(LeanTweenType.easeOutElastic);
+        LeanTween.move(nextButton.gameObject, nextButtonOriginalPos, 1f).setEase(LeanTweenType.easeOutCirc);
     }
 
     string FloatToPercentage(float input) {
