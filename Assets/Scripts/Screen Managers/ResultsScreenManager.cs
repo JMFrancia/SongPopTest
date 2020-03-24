@@ -42,10 +42,10 @@ public class ResultsScreenManager : MonoBehaviour
     {
         sceneLoadOp = SceneManager.LoadSceneAsync("Title");
         sceneLoadOp.allowSceneActivation = false;
-        blurPanel = GameObject.FindWithTag("BlurPanel").GetComponent<BlurPanelManager>();
         nextButton.onClick.AddListener(() => StartCoroutine(ReturnToTitleScreen(1.5f)));
+
+        blurPanel = GameObject.FindWithTag("BlurPanel").GetComponent<BlurPanelManager>();
         blurPanel.onBlurInComplete += PopulateResults;
-//        PopulateResults();
         blurPanel.BlurIn();
     }
 
@@ -56,8 +56,9 @@ public class ResultsScreenManager : MonoBehaviour
         float perfectSpeedScore = GameManager.ActivePlaylist.questions.Sum(q => GameManager.Data.SongSamples[q.song].length + 1f); //+1f for extra time to guess
         float speedScore = GameManager.scores.Sum() / perfectSpeedScore;
 
-        //Calculate accuracy scores
+        //Populate result rows
         int totalCorrect = 0;
+        float delay = 0f;
         for (int n = 0; n < GameManager.results.Length; n++)
         {
             int correctChoiceIndex = GameManager.ActivePlaylist.questions[n].answerIndex;
@@ -66,9 +67,11 @@ public class ResultsScreenManager : MonoBehaviour
 
             string song = $"\"{correctChoice.title}\" by {correctChoice.artist}";
             float speed = GameManager.Data.SongSamples[GameManager.ActivePlaylist.questions[n].song].length + 1 - GameManager.scores[n];
+
             ResultRow row = resultObj.GetComponent<ResultRow>();
             row.SetSong(song);
-            row.SetCorrect(GameManager.results[n]);
+            delay += .3f;
+            row.SetCorrect(GameManager.results[n], delay);
             row.SetSpeed($"{speed.ToString("0.0#")}s");
 
             if(GameManager.results[n]) {

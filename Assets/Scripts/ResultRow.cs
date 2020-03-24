@@ -22,10 +22,10 @@ public class ResultRow : MonoBehaviour
         songText.text = song;
     }
 
-    public void SetCorrect(bool correct)
+    public void SetCorrect(bool correct, float delay)
     {
         correctResultImage.sprite = correct ? checkImage : exImage;
-        StartCoroutine(DrawCorrectImage());
+        StartCoroutine(DrawCorrectImage(delay));
     }
 
     public void SetSpeed(string speed)
@@ -33,7 +33,8 @@ public class ResultRow : MonoBehaviour
         speedText.text = speed;
     }
 
-    IEnumerator DrawCorrectImage() {
+    IEnumerator DrawCorrectImage(float delay) {
+        yield return new WaitForSeconds(delay);
         float timePassed = 0f;
         while (timePassed < drawTime) {
             correctResultImage.fillAmount = timePassed / drawTime;

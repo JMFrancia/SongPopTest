@@ -48,7 +48,7 @@ public class BlurPanelManager : MonoBehaviour
             yield return new WaitForEndOfFrame();
             image.raycastTarget = false;
         }
-        if(start > finish) {
+        if(start > finish && onBlurInComplete != null) {
             onBlurInComplete.Invoke();
         }
     }
