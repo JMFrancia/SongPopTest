@@ -28,6 +28,7 @@ public class ResultsScreenManager : MonoBehaviour
         new ScoreGrade(.9f, 'A')
     };
 
+    [SerializeField] GameObject background;
     [SerializeField] Text speedGradeText;
     [SerializeField] Text speedRatingText;
     [SerializeField] Text accuracyScoreText;
@@ -37,16 +38,21 @@ public class ResultsScreenManager : MonoBehaviour
 
     AsyncOperation sceneLoadOp;
     BlurPanelManager blurPanel;
+    Vector3 nextButtonOriginalPos;
 
     private void Start()
     {
+        background.transform.position -= new Vector3(0f, 450f, 0f);
+
+        blurPanel = GameObject.FindWithTag("BlurPanel").GetComponent<BlurPanelManager>();
+        blurPanel.onBlurInComplete += () => LeanTween.move(background, Vector3.zero, .75f).setEase(LeanTweenType.easeOutCirc).setOnComplete(PopulateResults);
+        blurPanel.BlurIn();
+
         sceneLoadOp = SceneManager.LoadSceneAsync("Title");
         sceneLoadOp.allowSceneActivation = false;
         nextButton.onClick.AddListener(() => StartCoroutine(ReturnToTitleScreen(1.5f)));
-
-        blurPanel = GameObject.FindWithTag("BlurPanel").GetComponent<BlurPanelManager>();
-        blurPanel.onBlurInComplete += PopulateResults;
-        blurPanel.BlurIn();
+        nextButtonOriginalPos = nextButton.transform.position;
+        nextButton.transform.position -= new Vector3(0f, 78f, 0f);
     }
 
     void PopulateResults()
@@ -63,17 +69,26 @@ public class ResultsScreenManager : MonoBehaviour
         {
             int correctChoiceIndex = GameManager.ActivePlaylist.questions[n].answerIndex;
             Choice correctChoice = GameManager.ActivePlaylist.questions[n].choices[correctChoiceIndex];
-            GameObject resultObj = Instantiate(resultPrefab, resultsGroup.transform);
+            ResultRow row = Instantiate(resultPrefab, resultsGroup.transform).GetComponent<ResultRow>();
 
+            //Set song value
             string song = $"\"{correctChoice.title}\" by {correctChoice.artist}";
-            float speed = GameManager.Data.SongSamples[GameManager.ActivePlaylist.questions[n].song].length + 1 - GameManager.scores[n];
-
-            ResultRow row = resultObj.GetComponent<ResultRow>();
             row.SetSong(song);
+
+            //Set speed value
+            if (GameManager.results[n])
+            {
+                float speed = GameManager.Data.SongSamples[GameManager.ActivePlaylist.questions[n].song].length + 1 - GameManager.scores[n];
+                row.SetSpeed($"{speed.ToString("0.0#")}s");
+            } else {
+                row.SetSpeed("--");
+            }
+
+            //Set correct/incorrect value
             delay += .3f;
             row.SetCorrect(GameManager.results[n], delay);
-            row.SetSpeed($"{speed.ToString("0.0#")}s");
 
+            //Goes toward final score calculations
             if(GameManager.results[n]) {
                 totalCorrect++;
             }
@@ -112,6 +127,8 @@ public class ResultsScreenManager : MonoBehaviour
         accuracyScoreText.text = FloatToPercentage(accuracyScore);
         speedRatingText.text = FloatToPercentage(speedScore);
         speedGradeText.text = grade;
+
+        LeanTween.move(nextButton.gameObject, nextButtonOriginalPos, 1f).setEase(LeanTweenType.easeOutElastic);
     }
 
     string FloatToPercentage(float input) {

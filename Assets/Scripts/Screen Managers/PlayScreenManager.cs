@@ -38,9 +38,9 @@ public class PlayScreenManager : MonoBehaviour
         results = new bool[questions.Length];
         scores = new float[questions.Length];
 
-        LoadNextQuestion();
-
         timer.onComplete += () => OnChoiceButtonPress(false);
+
+        blurPanel.onBlurInComplete += LoadNextQuestion;
         blurPanel.BlurIn();
     }
 
