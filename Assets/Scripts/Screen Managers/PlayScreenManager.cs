@@ -123,7 +123,8 @@ public class PlayScreenManager : MonoBehaviour
         if(currentQuestionIndex < questions.Length)
         {
             LoadQuestion(questions[currentQuestionIndex]);
-        } else
+        } 
+        else
         {
             GameManager.results = results;
             GameManager.scores = scores;

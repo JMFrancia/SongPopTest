@@ -30,10 +30,9 @@ public class ResultsScreenManager : MonoBehaviour
 
     [SerializeField] Text speedGradeText;
     [SerializeField] Text speedRatingText;
-    [SerializeField] Text finalScoreText;
     [SerializeField] Text accuracyScoreText;
     [SerializeField] VerticalLayoutGroup resultsGroup;
-    [SerializeField] GameObject resultPanelPrefab;
+    [SerializeField] GameObject resultPrefab;
     [SerializeField] Button nextButton;
 
     AsyncOperation sceneLoadOp;
@@ -45,39 +44,9 @@ public class ResultsScreenManager : MonoBehaviour
         sceneLoadOp.allowSceneActivation = false;
         blurPanel = GameObject.FindWithTag("BlurPanel").GetComponent<BlurPanelManager>();
         nextButton.onClick.AddListener(() => StartCoroutine(ReturnToTitleScreen(1.5f)));
-        PopulateResults();
+        blurPanel.onBlurInComplete += PopulateResults;
+//        PopulateResults();
         blurPanel.BlurIn();
-    }
-
-    void PopulateSpeedScore() {
-        float perfectSpeedScore = GameManager.ActivePlaylist.questions.Sum(q => GameManager.Data.SongSamples[q.song].length + 1f); //+1f for extra time to guess
-        float speedScore = GameManager.scores.Sum() / perfectSpeedScore;
-        Array.Sort<ScoreGrade>(scoreGrades, (a, b) => a.minScore.CompareTo(b.minScore));
-        string grade = "F";
-        for (int n = 0; n < scoreGrades.Length; n++)
-        {
-            if (speedScore > scoreGrades[n].minScore)
-            {
-                grade = scoreGrades[n].grade.ToString();
-            }
-            else
-            {
-                if (n > 0)
-                {
-                    float gradeMargin = (scoreGrades[n].minScore - speedScore) - scoreGrades[n - 1].minScore;
-                    if (gradeMargin > .7f)
-                    {
-                        grade += "-";
-                    }
-                    else if (gradeMargin < .2f)
-                    {
-                        grade += "+";
-                    }
-                }
-                break;
-            }
-        }
-
     }
 
     void PopulateResults()
@@ -93,9 +62,15 @@ public class ResultsScreenManager : MonoBehaviour
         {
             int correctChoiceIndex = GameManager.ActivePlaylist.questions[n].answerIndex;
             Choice correctChoice = GameManager.ActivePlaylist.questions[n].choices[correctChoiceIndex];
-            GameObject resultObj = Instantiate(resultPanelPrefab, resultsGroup.transform);
-            resultObj.GetComponentInChildren<Text>().text = $"\"{correctChoice.title}\" by {correctChoice.artist}";
-            resultObj.GetComponent<Image>().color = GameManager.results[n] ? Color.green : Color.red;
+            GameObject resultObj = Instantiate(resultPrefab, resultsGroup.transform);
+
+            string song = $"\"{correctChoice.title}\" by {correctChoice.artist}";
+            float speed = GameManager.Data.SongSamples[GameManager.ActivePlaylist.questions[n].song].length + 1 - GameManager.scores[n];
+            ResultRow row = resultObj.GetComponent<ResultRow>();
+            row.SetSong(song);
+            row.SetCorrect(GameManager.results[n]);
+            row.SetSpeed($"{speed.ToString("0.0#")}s");
+
             if(GameManager.results[n]) {
                 totalCorrect++;
             }
@@ -131,10 +106,9 @@ public class ResultsScreenManager : MonoBehaviour
             }
         }
 
-        accuracyScoreText.text = $"Accuracy: {FloatToPercentage(accuracyScore)}";
-        speedRatingText.text = $"Speed: {FloatToPercentage(speedScore)}";
-        finalScoreText.text = $"Total: {FloatToPercentage(finalScore)}";
-        speedGradeText.text = $"Grade: {grade}";
+        accuracyScoreText.text = FloatToPercentage(accuracyScore);
+        speedRatingText.text = FloatToPercentage(speedScore);
+        speedGradeText.text = grade;
     }
 
     string FloatToPercentage(float input) {

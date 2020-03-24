@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -18,6 +19,8 @@ public class BlurPanelManager : MonoBehaviour
         }
     }
 
+    public Action onBlurInComplete;
+
     Image image;
 
     private void Awake()
@@ -26,7 +29,7 @@ public class BlurPanelManager : MonoBehaviour
     }
 
     public void BlurIn() {
-        StartCoroutine(BlurTransition(512,0, blurTime));
+        StartCoroutine(BlurTransition(512, 0, blurTime));
     }
 
     public void BlurOut()
@@ -44,6 +47,9 @@ public class BlurPanelManager : MonoBehaviour
             timePassed += Time.deltaTime;
             yield return new WaitForEndOfFrame();
             image.raycastTarget = false;
+        }
+        if(start > finish) {
+            onBlurInComplete.Invoke();
         }
     }
 }
