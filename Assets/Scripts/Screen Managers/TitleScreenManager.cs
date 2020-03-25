@@ -20,6 +20,9 @@ public class TitleScreenManager : MonoBehaviour
     [SerializeField] VerticalLayoutGroup playlistButtonGroup;
     [SerializeField] GameObject loadingPanel;
 
+    float defaultBackgroundVolume = .25f;
+    float fadeoutMultiplier = 1.5f;
+
     GameObject quitButtonGO;
     AsyncOperation sceneLoadOp;
     BlurPanelManager blurPanelManager;
@@ -46,7 +49,7 @@ public class TitleScreenManager : MonoBehaviour
 
         GameManager.Data.mediaReady += OnMediaReady;
 
-        blurPanelManager = GameObject.FindWithTag("BlurPanel").GetComponent<BlurPanelManager>();
+        blurPanelManager = GameObject.FindWithTag(TagNames.BLUR_PANEL_TAG).GetComponent<BlurPanelManager>();
         blurPanelManager.BlurIn();
     }
 
@@ -58,7 +61,7 @@ public class TitleScreenManager : MonoBehaviour
 
         backgroundAudiosource.clip = classroomBackgroundSound;
         backgroundAudiosource.loop = true;
-        backgroundAudiosource.volume = .25f;
+        backgroundAudiosource.volume = defaultBackgroundVolume;
         backgroundAudiosource.Play();
     }
 
@@ -109,7 +112,7 @@ public class TitleScreenManager : MonoBehaviour
 
     void FadeOutBackgroundSound()
     {
-        float fadeOutTime = shushSound.length * 1.5f;
+        float fadeOutTime = shushSound.length * fadeoutMultiplier;
         StartCoroutine(Utilities.FadeOutAudio(backgroundAudiosource, fadeOutTime));
     }
 

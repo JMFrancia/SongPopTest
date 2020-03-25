@@ -35,10 +35,8 @@ public class ResultsScreenManager : MonoBehaviour
         new ScoreGrade(.8f, 'B'),
         new ScoreGrade(.9f, 'A')
     };
-
     [Header("Image references")]
     [SerializeField] Image gradeCircle;
-
     [Header("Scene object references")]
     [SerializeField] GameObject background;
     [SerializeField] Text speedGradeText;
@@ -47,6 +45,18 @@ public class ResultsScreenManager : MonoBehaviour
     [SerializeField] VerticalLayoutGroup resultsGroup;
     [SerializeField] GameObject resultPrefab;
     [SerializeField] Button nextButton;
+
+    //Animation settings
+    float offscreenBackgroundYPos = 425f;
+    float offscreenNextbuttonXPos = 250f;
+    float sceneTransitionDelay = 1.5f;
+    float backgroundAnimationSpeed = .75f;
+    float gradeCircleAnimationSpeed = .33f;
+    float gradeCircleAnimationDelay = .75f;
+    float correctScoreAnimationDelay = .3f;
+
+    float gradePlusMargin = .2f;
+    float gradeMinusMargin = .7f;
 
     AsyncOperation sceneLoadOp;
     BlurPanelManager blurPanel;
@@ -58,11 +68,11 @@ public class ResultsScreenManager : MonoBehaviour
         //Starting animation
         gradeCircle.fillAmount = 0f;
         backgroundOriginalPos = background.transform.position;
-        background.transform.position = new Vector3(0f, 425f, 0f);
-        blurPanel = GameObject.FindWithTag("BlurPanel").GetComponent<BlurPanelManager>();
+        background.transform.position = new Vector3(0f, offscreenBackgroundYPos, 0f);
+        blurPanel = GameObject.FindWithTag(TagNames.BLUR_PANEL_TAG).GetComponent<BlurPanelManager>();
         blurPanel.onBlurInComplete += () =>
         {
-            LeanTween.move(background, backgroundOriginalPos, .75f).setEase(LeanTweenType.easeOutCirc).setOnComplete(PopulateResults);
+            LeanTween.move(background, backgroundOriginalPos, backgroundAnimationSpeed).setEase(LeanTweenType.easeOutCirc).setOnComplete(PopulateResults);
             foreach (AudioSource source in GetComponents<AudioSource>())
             {
                 source.Play();
@@ -70,17 +80,17 @@ public class ResultsScreenManager : MonoBehaviour
         };
         blurPanel.BlurIn();
 
-        sceneLoadOp = SceneManager.LoadSceneAsync("Title");
+        sceneLoadOp = SceneManager.LoadSceneAsync(SceneNames.TITLE_SCENE);
         sceneLoadOp.allowSceneActivation = false;
 
-        nextButton.onClick.AddListener(() => StartCoroutine(ReturnToTitleScreenAfterDelay(1.5f)));
+        nextButton.onClick.AddListener(() => StartCoroutine(ReturnToTitleScreenAfterDelay(sceneTransitionDelay)));
         nextButtonOriginalPos = nextButton.transform.position;
-        nextButton.transform.position += new Vector3(250f, 0f, 0f);
+        nextButton.transform.position += new Vector3(offscreenNextbuttonXPos, 0f, 0f);
     }
 
     void CircleGrade(float delay = 0f)
     {
-        StartCoroutine(FillImage(gradeCircle, .33f, delay));
+        StartCoroutine(FillImage(gradeCircle, gradeCircleAnimationSpeed, delay));
     }
 
     /*
@@ -113,7 +123,7 @@ public class ResultsScreenManager : MonoBehaviour
             }
 
             //Set correct/incorrect value with delays for animation
-            delay += .3f;
+            delay += correctScoreAnimationDelay;
             row.SetCorrect(GameManager.correctAnswers[n], delay);
 
             //Goes toward final score calculations
@@ -125,7 +135,7 @@ public class ResultsScreenManager : MonoBehaviour
             //Finish animations by circling the letter grade
             if (n == GameManager.correctAnswers.Length - 1)
             {
-                CircleGrade(delay + .75f);
+                CircleGrade(delay + gradeCircleAnimationDelay);
             }
         }
 
@@ -151,11 +161,11 @@ public class ResultsScreenManager : MonoBehaviour
                 if (n > 0)
                 {
                     float gradeMargin = (scoreGrades[n].minScore - finalScore) - scoreGrades[n - 1].minScore;
-                    if (gradeMargin > .7f)
+                    if (gradeMargin > gradeMinusMargin)
                     {
                         grade += "-";
                     }
-                    else if (gradeMargin < .2f)
+                    else if (gradeMargin < gradePlusMargin)
                     {
                         grade += "+";
                     }

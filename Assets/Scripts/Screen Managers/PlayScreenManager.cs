@@ -46,7 +46,7 @@ public class PlayScreenManager : MonoBehaviour
         songAudioSource = audioSources[0];
         sfxAudioSource = audioSources[1];
 
-        blurPanel = GameObject.FindWithTag("BlurPanel").GetComponent<BlurPanelManager>();
+        blurPanel = GameObject.FindWithTag(TagNames.BLUR_PANEL_TAG).GetComponent<BlurPanelManager>();
         questions = GameManager.ActivePlaylist.questions;
         results = new bool[questions.Length];
         scores = new float[questions.Length];
@@ -195,6 +195,6 @@ public class PlayScreenManager : MonoBehaviour
     {
         blurPanel.BlurOut();
         yield return new WaitForSeconds(delay);
-        SceneManager.LoadScene("Results");
+        SceneManager.LoadScene(SceneNames.RESULTS_SCENE);
     }
 }

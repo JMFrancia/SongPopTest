@@ -13,6 +13,8 @@ public class BlurPanelManager : MonoBehaviour
     [Tooltip("Duration for blur animation")]
     [SerializeField] float blurTime = 1.5f;
 
+    int maxBlurValue = 512;
+
     public int Blur
     {
         get
@@ -53,7 +55,7 @@ public class BlurPanelManager : MonoBehaviour
      */
     public void BlurIn()
     {
-        StartCoroutine(BlurTransition(512, 0, blurTime));
+        StartCoroutine(BlurTransition(maxBlurValue, 0, blurTime));
     }
 
     /*
@@ -61,7 +63,7 @@ public class BlurPanelManager : MonoBehaviour
      */
     public void BlurOut()
     {
-        StartCoroutine(BlurTransition(0, 512, blurTime));
+        StartCoroutine(BlurTransition(0, maxBlurValue, blurTime));
     }
 
     IEnumerator BlurTransition(int start, int finish, float time)

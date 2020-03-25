@@ -1,5 +1,5 @@
-﻿using UnityEngine;
-using System;
+﻿using System;
+using UnityEngine;
 
 /*
  * GameManager class is a permenant singleton class in charge of keeping track of 
