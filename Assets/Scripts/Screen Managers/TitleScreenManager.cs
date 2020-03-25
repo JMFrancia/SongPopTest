@@ -3,12 +3,20 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
-public class MainScreenManager : MonoBehaviour
+/*
+ * Manager script for the title screen
+ */
+public class TitleScreenManager : MonoBehaviour
 {
+    [Header("Audio clip references")]
     [SerializeField] AudioClip shushSound;
     [SerializeField] AudioClip classroomBackgroundSound;
+
+    [Header("Prefab references")]
     [SerializeField] GameObject playlistButtonPrefab;
     [SerializeField] GameObject quitButtonPrefab;
+
+    [Header("Scene object references")]
     [SerializeField] VerticalLayoutGroup playlistButtonGroup;
     [SerializeField] GameObject loadingPanel;
 
@@ -27,6 +35,7 @@ public class MainScreenManager : MonoBehaviour
         quitButtonGO = Instantiate(quitButtonPrefab, playlistButtonGroup.transform);
         quitButtonGO.GetComponent<Button>().onClick.AddListener(Quit);
 
+        //Populate buttons once playlist data loaded
         if (GameManager.isDataLoaded)
         {
             PopulateButtons();
@@ -43,7 +52,8 @@ public class MainScreenManager : MonoBehaviour
 
     private void Start()
     {
-        sceneLoadOp = SceneManager.LoadSceneAsync("Game");
+        //Async pre-load for game screen
+        sceneLoadOp = SceneManager.LoadSceneAsync(SceneNames.GAME_SCENE);
         sceneLoadOp.allowSceneActivation = false;
 
         backgroundAudiosource.clip = classroomBackgroundSound;
@@ -59,7 +69,7 @@ public class MainScreenManager : MonoBehaviour
     }
 
     /*
-     * Once data loaded in GameManager, populate playlist choice buttons
+     * Generates playlist buttons
      */
     void PopulateButtons() {
         foreach (Playlist playlist in GameManager.Data.Playlists.Values)
@@ -72,38 +82,40 @@ public class MainScreenManager : MonoBehaviour
         GameManager.dataLoaded -= PopulateButtons;
     }
 
+    /*
+     * Loads playlist to begin game
+     */
     void LoadPlaylist(Playlist playlist)
     {
         shushAudiosource.clip = shushSound;
         shushAudiosource.loop = false;
         shushAudiosource.Play();
-        StartCoroutine(FadeOutBackground(shushSound.length * 1.5f));
 
         loadingPanel.SetActive(true);
         GameManager.ActivePlaylist = playlist;
     }
 
-    IEnumerator FadeOutBackground(float time)
-    {
-        float timePassed = 0f;
-        float originalVal = backgroundAudiosource.volume;
-        while (backgroundAudiosource.volume > 0f)
-        {
-            backgroundAudiosource.volume = Mathf.Lerp(originalVal, 0f, timePassed / time);
-            timePassed += Time.deltaTime;
-            yield return new WaitForEndOfFrame();
-        }
-        backgroundAudiosource.Stop();
-        backgroundAudiosource.volume = originalVal;
-    }
-
+    /*
+     * When a playlist is loaded, mediaReady event is called as soon as media is downloaded.
+     * That's our cue to begin transition to the next scene ASAP.    
+     */
     void OnMediaReady()
     {
         GameManager.Data.mediaReady -= OnMediaReady;
         Debug.Log("Media ready");
+        FadeOutBackgroundSound();
         StartCoroutine(LoadSceneWhenShushComplete());
     }
 
+    void FadeOutBackgroundSound()
+    {
+        float fadeOutTime = shushSound.length * 1.5f;
+        StartCoroutine(Utilities.FadeOutAudio(backgroundAudiosource, fadeOutTime));
+    }
+
+    /*
+     * Wait until "shush" sfx complete before loading next scene
+     */
     IEnumerator LoadSceneWhenShushComplete() { 
         while(shushAudiosource.isPlaying) {
             yield return new WaitForSeconds(shushSound.length - shushAudiosource.time);
@@ -113,6 +125,7 @@ public class MainScreenManager : MonoBehaviour
 
     private void Quit()
     {
+        Debug.Log("Quitting game. Goodbye!");
         Application.Quit();
     }
 }

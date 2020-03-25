@@ -1,22 +1,33 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
+/*
+ * Playscreen manager handles logic for the game scene
+ */
 public class PlayScreenManager : MonoBehaviour
 {
-    [SerializeField] float extraTimeToGuess = 1f; //Time to guess beyond the length of the audio clip
+    [Tooltip("Additional time beyond end of song clip to answer")]
+    [SerializeField] float extraTimeToGuess = 1f;
+    [Tooltip("Wait time between answering question and next question")]
     [SerializeField] float waitBetweenQuestions = 1.5f;
+    [Tooltip("Fadeout time for a song clip")]
     [SerializeField] float songFadeout = 1f;
 
+    [Header("Audio references")]
     [SerializeField] AudioClip wrongAnswerSound;
     [SerializeField] AudioClip rightAnswerSound;
 
+    [Header("Scene object references")]
     [SerializeField] GameObject choiceButtonPrefab;
     [SerializeField] VerticalLayoutGroup choicesLayoutGroup;
     [SerializeField] Text headerText;
     [SerializeField] Timer timer;
+
+    const string CORRECT_ANSWER = "Correct!";
+    const string WRONG_ANSWER = "Wrong!";
+    const string CALL_TO_ACTION = "Name that song!";
 
     AudioSource songAudioSource;
     AudioSource sfxAudioSource;
@@ -29,7 +40,6 @@ public class PlayScreenManager : MonoBehaviour
     int currentQuestionIndex = -1;
     bool isFadingOut = false;
 
-
     private void Start()
     {
         AudioSource[] audioSources = GetComponents<AudioSource>();
@@ -41,14 +51,27 @@ public class PlayScreenManager : MonoBehaviour
         results = new bool[questions.Length];
         scores = new float[questions.Length];
 
-
-        //If no choice made before timer up
+        //If no choice made before timer up, no answer given = wrong
         timer.onComplete += () => OnChoiceButtonPress(null);
 
         blurPanel.onBlurInComplete += LoadNextQuestion;
         blurPanel.BlurIn();
     }
 
+    private void Update()
+    {
+        //Update hook only used to determining when to fade out a songclip
+        if (songAudioSource.isPlaying &&
+            !isFadingOut &&
+            songAudioSource.time >= (songAudioSource.clip.length - songFadeout))
+        {
+            FadeOutSong();
+        }
+    }
+
+    /*
+     * Begins a question, resetting timer, playing soundclip and populating buttons
+     */
     void LoadQuestion(Question question)
     {
         songAudioSource.clip = GameManager.Data.SongSamples[question.song];
@@ -56,10 +79,12 @@ public class PlayScreenManager : MonoBehaviour
         songAudioSource.Play();
 
         //Generate buttons if not already done
-        if(choiceButtons == null) {
+        if (choiceButtons == null)
+        {
             //Operates on assumption that all questions have same # of choices
             choiceButtons = new Button[question.choices.Length];
-            for(int n = 0; n < choiceButtons.Length; n++) {
+            for (int n = 0; n < choiceButtons.Length; n++)
+            {
                 Button button = Instantiate(choiceButtonPrefab, choicesLayoutGroup.transform).GetComponent<Button>();
                 button.onClick.AddListener(() => OnChoiceButtonPress(button));
                 choiceButtons[n] = button;
@@ -70,53 +95,40 @@ public class PlayScreenManager : MonoBehaviour
         for (int n = 0; n < question.choices.Length; n++)
         {
             choiceButtons[n].interactable = true;
-            choiceButtons[n].image.color = Color.gray;
+            choiceButtons[n].image.color = Color.white;
             choiceButtons[n].GetComponentInChildren<Text>().text = $"\"{question.choices[n].title}\" by {question.choices[n].artist}";
-            //button.onClick.RemoveAllListeners();
-            //button.onClick.AddListener(() => OnChoiceButtonPress(button));
-            //Debug.Log("Listeners: " + button.onClick.GetPersistentEventCount());
             if (n == question.answerIndex)
             {
                 correctChoice = choiceButtons[n];
             }
         }
 
-        //Shuffle buttons here
+        //Shuffle buttons to prevent players from memorizing answer positions if re-playing same playlist
+        ShuffleLayoutChilden(choicesLayoutGroup);
     }
 
-    void PlayAnswerSound(bool correct)
+    /*
+     * Load next question on the playlist
+     */
+    void LoadNextQuestion()
     {
-        StartCoroutine(FadeOutAudio());
-        sfxAudioSource.clip = correct ? rightAnswerSound : wrongAnswerSound;
-        sfxAudioSource.Play();
-    }
-
-    private void Update()
-    {
-        if (songAudioSource.isPlaying &&
-            !isFadingOut &&
-            songAudioSource.time >= (songAudioSource.clip.length - songFadeout))
+        headerText.text = CALL_TO_ACTION;
+        currentQuestionIndex++;
+        if (currentQuestionIndex < questions.Length)
         {
-            StartCoroutine(FadeOutAudio());
+            LoadQuestion(questions[currentQuestionIndex]);
+        }
+        else
+        {
+            GameManager.correctAnswers = results;
+            GameManager.speedScores = scores;
+            StartCoroutine(GoToResultsScreenAfterDelay(1.5f));
         }
     }
 
-    //Move to static utilities class
-    IEnumerator FadeOutAudio()
-    {
-        isFadingOut = true;
-        float timePassed = 0f;
-        while (songAudioSource.volume > 0f)
-        {
-            songAudioSource.volume = Mathf.Max(0f, 1f - timePassed / songFadeout);
-            timePassed += Time.deltaTime;
-            yield return new WaitForEndOfFrame();
-        }
-        isFadingOut = false;
-        songAudioSource.Stop();
-        songAudioSource.volume = 1f;
-    }
-
+    /*
+     * Callback for pressing a choice button
+     */
     void OnChoiceButtonPress(Button button)
     {
         bool correct = (button == correctChoice);
@@ -124,7 +136,7 @@ public class PlayScreenManager : MonoBehaviour
         timer.Stop();
         scores[currentQuestionIndex] = timer.time;
 
-        headerText.text = correct ? "Correct!" : "Wrong!";
+        headerText.text = correct ? CORRECT_ANSWER : WRONG_ANSWER;
         results[currentQuestionIndex] = correct;
         PlayAnswerSound(correct);
 
@@ -137,32 +149,45 @@ public class PlayScreenManager : MonoBehaviour
                 b.image.color = Color.green;
             }
         }
-        if(!correct && button != null) {
+        if (!correct && button != null)
+        {
             button.image.color = Color.red;
         }
 
-        StartCoroutine(LoadNextQuestionInSeconds(waitBetweenQuestions));
+        StartCoroutine(LoadNextQuestionAfterDelay(waitBetweenQuestions));
     }
 
-    void LoadNextQuestion()
+    void ShuffleLayoutChilden(VerticalLayoutGroup group)
     {
-        headerText.text = "Name that song!";
-        currentQuestionIndex++;
-        if (currentQuestionIndex < questions.Length)
+        for (int n = 0; n < group.transform.childCount; n++)
         {
-            LoadQuestion(questions[currentQuestionIndex]);
-        }
-        else
-        {
-            GameManager.results = results;
-            GameManager.scores = scores;
-            StartCoroutine(GoToResultsScreenAfterDelay(1.5f));
+            int index = Random.Range(0, group.transform.childCount - 1);
+            group.transform.GetChild(n).SetSiblingIndex(index);
         }
     }
 
-    IEnumerator LoadNextQuestionInSeconds(float seconds)
+    void PlayAnswerSound(bool correct)
     {
-        yield return new WaitForSeconds(seconds);
+        FadeOutSong();
+        sfxAudioSource.clip = correct ? rightAnswerSound : wrongAnswerSound;
+        sfxAudioSource.Play();
+    }
+
+    void FadeOutSong()
+    {
+        isFadingOut = true;
+        StartCoroutine(
+            Utilities.FadeOutAudio(
+                songAudioSource,
+                songFadeout,
+                () => { isFadingOut = false; }
+            )
+        );
+    }
+
+    IEnumerator LoadNextQuestionAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
         LoadNextQuestion();
     }
 

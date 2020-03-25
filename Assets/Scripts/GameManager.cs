@@ -1,28 +1,41 @@
 ﻿using UnityEngine;
 using System;
 
+/*
+ * GameManager class is a permenant singleton class in charge of keeping track of 
+ * game state. 
+ * 
+ * Eventually wound up being not much more than a glorified gatekeeper
+ * for DataManager, but also stores scores / results, so kept it as is.
+ */
 public class GameManager : MonoBehaviour
 {
-    public static DataManager Data {
-        get {
+    public static DataManager Data
+    {
+        get
+        {
             return _instance._data;
         }
     }
 
     public static event Action dataLoaded;
 
-    public static Playlist ActivePlaylist {
-        set {
+    //The playlist being used for the current game
+    public static Playlist ActivePlaylist
+    {
+        set
+        {
             _instance.SetActivePlaylist(value);
         }
-        get {
+        get
+        {
             return _instance._activePlaylist;
         }
     }
     public static bool isDataLoaded = false;
 
-    public static bool[] results;
-    public static float[] scores;
+    public static bool[] correctAnswers;
+    public static float[] speedScores;
 
     static GameManager _instance;
     Playlist _activePlaylist;
@@ -44,8 +57,10 @@ public class GameManager : MonoBehaviour
         _data = GetComponent<DataManager>();
         _data.Initialize();
         isDataLoaded = true;
-        if(dataLoaded != null)
-            dataLoaded.Invoke(); 
+        if (dataLoaded != null)
+        {
+            dataLoaded.Invoke();
+        }
     }
 
     void SetActivePlaylist(Playlist playlist)

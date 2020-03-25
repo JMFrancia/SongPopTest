@@ -3,16 +3,24 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
+/*
+ * Control script for the timer object
+ */
 public class Timer : MonoBehaviour
 {
+    [Tooltip("Time at which timer changes to warning color")]
     [SerializeField] float warningTime = 3f;
+    [Tooltip("Transition time fading to warning color")]
     [SerializeField] float warningTimeTransition = 1f;
+    [Header("Scene object references")]
     [SerializeField] Image bar;
     [SerializeField] Text timerText;
     [SerializeField] Color warningColor;
 
+    //Current time on the clock
     public float time { get; private set; }
 
+    //Callback for when timer complete
     public Action onComplete;
 
     Color originalColor;
@@ -24,18 +32,27 @@ public class Timer : MonoBehaviour
         originalColor = bar.color;
     }
 
-    public void Set(float seconds) {
+    /*
+     * Sets and starts timer
+     */
+    public void Set(float seconds)
+    {
         time = seconds;
         originalTime = seconds;
         bar.color = originalColor;
         timerCoroutine = StartCoroutine(RunTimer());
     }
 
-    public void Stop() {
+    /*
+     * Stops timer in place
+     */
+    public void Stop()
+    {
         StopCoroutine(timerCoroutine);
     }
 
-    IEnumerator RunTimer() {
+    IEnumerator RunTimer()
+    {
         while (time > 0f)
         {
             float warningTimeEnd = warningTime - warningTimeTransition;

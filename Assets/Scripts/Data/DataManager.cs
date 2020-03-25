@@ -4,6 +4,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 
+/*
+ * Data Manager class is in charge of fetching and storing data from web sources, such as images and song clips.
+ * 
+ * In the original design of the game I was using both song clips and images, but decided to scrap images because
+ * I saw it as a potential avenue for cheaters (see ReadMe.md for details). That said, I left in logic for images,
+ * just commented them out.
+ */
 public class DataManager : MonoBehaviour
 {
     //Necessary to import top-level JSON array
@@ -12,16 +19,17 @@ public class DataManager : MonoBehaviour
         public List<Playlist> playlists;
     }
 
+    [Tooltip("If true, will keep downloaded playlist media, so don't need to re-download if replaying the list.")]
+    [SerializeField] bool cacheMediaBetweenRounds = false;  //If this were production code, would also include media storage cap
+    [Tooltip("The JSON data file to use")]
     [SerializeField] TextAsset rawDataJSON;
-    [SerializeField] bool cacheDataBetweenRounds = false;
 
-    public Action mediaReady;
+    public Action mediaReady; //Callback for when all media is done downloading
 
     public Dictionary<string, Playlist> Playlists { get; private set; }
     public Dictionary<Song, AudioClip> SongSamples { get; private set; }
     public Dictionary<string, Texture> Images { get; private set; }
-    public bool fetchingMedia { get; private set; } = false;
-
+    public bool fetchingMedia { get; private set; } = false; //Can be used to check if in process of fetching media. Never used for this project, but kept anyway
 
     SPData data;
 
@@ -33,17 +41,17 @@ public class DataManager : MonoBehaviour
     int imageRequestsInProgress;
     int totalImageRequests;
 
-
     /*
      * Deserializes JSON data and sets up Playlist dict
      */
     public void Initialize()
     {
         string formattedData = $"{{\"playlists\":{rawDataJSON.text}}}";
-        data = JsonUtility.FromJson<SPData>( formattedData);
+        data = JsonUtility.FromJson<SPData>(formattedData);
 
         Playlists = new Dictionary<string, Playlist>();
-        for(int n = 0; n < data.playlists.Count; n++) {
+        for (int n = 0; n < data.playlists.Count; n++)
+        {
             Playlists[data.playlists[n].playlist] = data.playlists[n];
         }
 
@@ -57,7 +65,7 @@ public class DataManager : MonoBehaviour
     public void FetchPlaylistMedia(Playlist playlist)
     {
         fetchingMedia = true;
-        FetchAllImages(playlist);
+        //FetchAllImages(playlist);
         FetchAllAudioClips(playlist);
     }
 
@@ -66,7 +74,7 @@ public class DataManager : MonoBehaviour
      */
     void FetchAllAudioClips(Playlist playlist)
     {
-        if(!cacheDataBetweenRounds)
+        if (!cacheMediaBetweenRounds)
             SongSamples.Clear();
         audioClipsFetched = 0;
         audioRequestsInProgress = 0;
@@ -83,7 +91,7 @@ public class DataManager : MonoBehaviour
      */
     void FetchAllImages(Playlist playlist)
     {
-        if (!cacheDataBetweenRounds)
+        if (!cacheMediaBetweenRounds)
             Images.Clear();
         imagesFetched = 0;
         imageRequestsInProgress = 0;
@@ -96,7 +104,7 @@ public class DataManager : MonoBehaviour
     }
 
     /*
-     * Fetches / caches audio clip from given URL, stores in audio clip dictionary with URL as key
+     * Fetches / caches audio clip from given URL, stores in audio clip dictionary with URL as key   
      */
     IEnumerator FetchImage(string url)
     {
@@ -127,7 +135,8 @@ public class DataManager : MonoBehaviour
         if (imageRequestsInProgress == 0)
         {
             Debug.Log($"All images fetched. {imagesFetched} / {totalImageRequests} received successfully");
-            if(audioRequestsInProgress == 0) {
+            if (audioRequestsInProgress == 0)
+            {
                 fetchingMedia = false;
                 mediaReady.Invoke();
             }
@@ -166,11 +175,17 @@ public class DataManager : MonoBehaviour
         if (audioRequestsInProgress == 0)
         {
             Debug.Log($"All audio clips fetched. {audioClipsFetched} / {totalAudioRequests} received successfully");
+
+            /*
             if (imageRequestsInProgress == 0)
             {
                 fetchingMedia = false;
                 mediaReady.Invoke();
             }
+            */
+
+            fetchingMedia = false;
+            mediaReady.Invoke();
         }
     }
 
