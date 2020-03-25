@@ -32,11 +32,9 @@ public class MainScreenManager : MonoBehaviour
             PopulateButtons();
         }
         else {
-            GameManager.dataLoaded -= PopulateButtons;
             GameManager.dataLoaded += PopulateButtons;
         }
 
-        GameManager.Data.mediaReady -= OnMediaReady;
         GameManager.Data.mediaReady += OnMediaReady;
 
         blurPanelManager = GameObject.FindWithTag("BlurPanel").GetComponent<BlurPanelManager>();
@@ -71,6 +69,7 @@ public class MainScreenManager : MonoBehaviour
             buttonGO.GetComponent<Button>().onClick.AddListener(() => LoadPlaylist(playlist));
         }
         quitButtonGO.transform.SetAsLastSibling();
+        GameManager.dataLoaded -= PopulateButtons;
     }
 
     void LoadPlaylist(Playlist playlist)
@@ -100,6 +99,7 @@ public class MainScreenManager : MonoBehaviour
 
     void OnMediaReady()
     {
+        GameManager.Data.mediaReady -= OnMediaReady;
         Debug.Log("Media ready");
         StartCoroutine(LoadSceneWhenShushComplete());
     }

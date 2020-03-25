@@ -22,10 +22,13 @@ public class PlayScreenManager : MonoBehaviour
     AudioSource sfxAudioSource;
     BlurPanelManager blurPanel;
     Question[] questions;
+    Button[] choiceButtons;
+    Button correctChoice;
     bool[] results;
     float[] scores;
     int currentQuestionIndex = -1;
     bool isFadingOut = false;
+
 
     private void Start()
     {
@@ -38,28 +41,47 @@ public class PlayScreenManager : MonoBehaviour
         results = new bool[questions.Length];
         scores = new float[questions.Length];
 
-        timer.onComplete += () => OnChoiceButtonPress(false);
+
+        //If no choice made before timer up
+        timer.onComplete += () => OnChoiceButtonPress(null);
 
         blurPanel.onBlurInComplete += LoadNextQuestion;
         blurPanel.BlurIn();
     }
 
-    void LoadQuestion(Question question) {
+    void LoadQuestion(Question question)
+    {
         songAudioSource.clip = GameManager.Data.SongSamples[question.song];
         timer.Set(songAudioSource.clip.length + extraTimeToGuess);
         songAudioSource.Play();
 
-        //Refactor to re-use same buttons
-        foreach(Transform choice in choicesLayoutGroup.transform) {
-            Destroy(choice.gameObject);
+        //Generate buttons if not already done
+        if(choiceButtons == null) {
+            //Operates on assumption that all questions have same # of choices
+            choiceButtons = new Button[question.choices.Length];
+            for(int n = 0; n < choiceButtons.Length; n++) {
+                Button button = Instantiate(choiceButtonPrefab, choicesLayoutGroup.transform).GetComponent<Button>();
+                button.onClick.AddListener(() => OnChoiceButtonPress(button));
+                choiceButtons[n] = button;
+            }
         }
 
-        for (int n = 0; n < question.choices.Length; n++) {
-            GameObject choiceGO = Instantiate(choiceButtonPrefab, choicesLayoutGroup.transform);
-            choiceGO.GetComponentInChildren<Text>().text = $"\"{question.choices[n].title}\" by {question.choices[n].artist}";
-            bool correct = (n == question.answerIndex);
-            choiceGO.GetComponent<Button>().onClick.AddListener(() => OnChoiceButtonPress(correct));
-        } 
+        //Set button text + callback
+        for (int n = 0; n < question.choices.Length; n++)
+        {
+            choiceButtons[n].interactable = true;
+            choiceButtons[n].image.color = Color.gray;
+            choiceButtons[n].GetComponentInChildren<Text>().text = $"\"{question.choices[n].title}\" by {question.choices[n].artist}";
+            //button.onClick.RemoveAllListeners();
+            //button.onClick.AddListener(() => OnChoiceButtonPress(button));
+            //Debug.Log("Listeners: " + button.onClick.GetPersistentEventCount());
+            if (n == question.answerIndex)
+            {
+                correctChoice = choiceButtons[n];
+            }
+        }
+
+        //Shuffle buttons here
     }
 
     void PlayAnswerSound(bool correct)
@@ -71,19 +93,22 @@ public class PlayScreenManager : MonoBehaviour
 
     private void Update()
     {
-        if( songAudioSource.isPlaying && 
-            !isFadingOut && 
-            songAudioSource.time >= (songAudioSource.clip.length - songFadeout)) 
+        if (songAudioSource.isPlaying &&
+            !isFadingOut &&
+            songAudioSource.time >= (songAudioSource.clip.length - songFadeout))
         {
             StartCoroutine(FadeOutAudio());
         }
     }
 
-    IEnumerator FadeOutAudio() {
+    //Move to static utilities class
+    IEnumerator FadeOutAudio()
+    {
         isFadingOut = true;
         float timePassed = 0f;
-        while(songAudioSource.volume > 0f) {
-            songAudioSource.volume = Mathf.Max(0f , 1f - timePassed / songFadeout);
+        while (songAudioSource.volume > 0f)
+        {
+            songAudioSource.volume = Mathf.Max(0f, 1f - timePassed / songFadeout);
             timePassed += Time.deltaTime;
             yield return new WaitForEndOfFrame();
         }
@@ -92,7 +117,10 @@ public class PlayScreenManager : MonoBehaviour
         songAudioSource.volume = 1f;
     }
 
-    void OnChoiceButtonPress(bool correct) {
+    void OnChoiceButtonPress(Button button)
+    {
+        bool correct = (button == correctChoice);
+
         timer.Stop();
         scores[currentQuestionIndex] = timer.time;
 
@@ -100,39 +128,46 @@ public class PlayScreenManager : MonoBehaviour
         results[currentQuestionIndex] = correct;
         PlayAnswerSound(correct);
 
-        for(int n = 0; n < choicesLayoutGroup.transform.childCount; n++) {
+        for (int n = 0; n < choicesLayoutGroup.transform.childCount; n++)
+        {
             Button b = choicesLayoutGroup.transform.GetChild(n).GetComponent<Button>();
             b.interactable = false;
-            if (n == questions[currentQuestionIndex].answerIndex) {
+            if (b == correctChoice)
+            {
                 b.image.color = Color.green;
             }
         }
+        if(!correct && button != null) {
+            button.image.color = Color.red;
+        }
 
         StartCoroutine(LoadNextQuestionInSeconds(waitBetweenQuestions));
-    }
-
-    IEnumerator LoadNextQuestionInSeconds(float seconds) {
-        yield return new WaitForSeconds(seconds);
-        LoadNextQuestion();
     }
 
     void LoadNextQuestion()
     {
         headerText.text = "Name that song!";
         currentQuestionIndex++;
-        if(currentQuestionIndex < questions.Length)
+        if (currentQuestionIndex < questions.Length)
         {
             LoadQuestion(questions[currentQuestionIndex]);
-        } 
+        }
         else
         {
             GameManager.results = results;
             GameManager.scores = scores;
-            StartCoroutine(GoToResultsScreen(1.5f));
+            StartCoroutine(GoToResultsScreenAfterDelay(1.5f));
         }
     }
 
-    IEnumerator GoToResultsScreen(float delay) {
+    IEnumerator LoadNextQuestionInSeconds(float seconds)
+    {
+        yield return new WaitForSeconds(seconds);
+        LoadNextQuestion();
+    }
+
+    IEnumerator GoToResultsScreenAfterDelay(float delay)
+    {
         blurPanel.BlurOut();
         yield return new WaitForSeconds(delay);
         SceneManager.LoadScene("Results");
